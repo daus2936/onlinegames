@@ -34,5 +34,10 @@ pipeline {
                }
             }
         }
+        stage('Deploy the Docker Image/NodeJs Appl to the Env as container') {
+            steps {
+                sh 'docker run -d --name bingoonline -p 3000:3000 daus2936/bingoonlproject:latest'
+            }
+        }   
     }
 }

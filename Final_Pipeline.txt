@@ -1,0 +1,78 @@
+pipeline {
+    agent any
+    tools {
+        jdk 'jdk17'
+        nodejs 'node16'
+    }
+    environment {
+        SCANNER_HOME=tool 'sonar-scanner'
+    }
+    stages {
+        stage('Clean the workspace') {
+            steps {
+                cleanWs()
+            }
+        }
+        stage('Checkout the Project from GitHub Repo to Jenkins Server') {
+            steps {
+                git branch: 'main', url: 'https://github.com/Shikhar82/onlinegame.git'
+            }
+        }
+        stage('SonarQube Analysis') {
+            steps {
+               withSonarQubeEnv('sonarqube') {
+                   sh ''' $SCANNER_HOME/bin/sonar-scanner \
+                          -Dsonar.projectKey=BingoOnlineProject \
+                          -Dsonar.sources=. \
+                          -Dsonar.host.url=http://13.233.66.124:9000 \
+                          -Dsonar.login=squ_5537a18279578d7609c8201043e40eb5d37e6a38 '''
+                  } 
+            }
+        }
+        stage('Quality Gate Check') {
+            steps {
+                script {
+                    waitForQualityGate abortPipeline: false, credentialsId: 'Sonar-token'
+                }
+            }
+        }
+        stage('Install Dependencies') {
+            steps {
+                sh "npm install"
+            }
+        }
+        stage('OWASP FS SCAN') {
+            steps {
+                dependencyCheck additionalArguments: '--scan ./ --disableYarnAudit --disableNodeAudit', odcInstallation: 'DP'
+                dependencyCheckPublisher pattern: '**/dependency-check-report.xml'
+            }
+        }
+        stage('Trivy FS Scanning') {
+            steps {
+                sh "trivy fs . > trivyscanreport.txt"
+            }
+        }
+        stage('Docker Build using the Dockerfile and then push it to DockerHub') {
+            steps {
+               script {
+                   withDockerRegistry(credentialsId: 'docker', toolName: 'docker') {
+                   sh "docker build -t bingoonlproject . "
+                   sh "docker tag bingoonlproject shikhardocker/bingoonlproject:latest"
+                   sh "docker push shikhardocker/bingoonlproject:latest "
+                 }
+               }
+            }
+        }
+        stage('Trivy scanning on Docker Image') {
+            steps {
+                sh "trivy image shikhardocker/bingoonlproject:latest > trivydockerimage.txt"
+            }
+        }
+        stage('Deploy the Docker Image/NodeJs Appl to the Env as container') {
+            steps {
+                sh 'docker run -d --name bingoonline -p 3000:3000 shikhardocker/bingoonlproject:latest'
+            }
+        }        
+        
+    }
+}
