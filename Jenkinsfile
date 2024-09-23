@@ -10,5 +10,10 @@ pipeline {
                 cleanWs()
             }
         }
+        stage('Checkout the project from github repo') {
+            steps {
+                git branch: 'main', url: 'git@github.com:daus2936/onlinegames.git'
+            }
+        }
     }
 }
