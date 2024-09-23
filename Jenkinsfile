@@ -22,7 +22,7 @@ pipeline {
             steps {
                 withSonarQubeEnv('sonarqube-server') {
                     sh '''
-                    sonar-scanner \
+                    $SCANNER_HOME/bin/sonar-scanner \
                     -Dsonar.projectKey=BingoOnlineProject \
                     -Dsonar.sources=. \
                     -Dsonar.host.url=http://18.136.183.0:9000 \
