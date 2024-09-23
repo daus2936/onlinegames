@@ -41,10 +41,15 @@ pipeline {
                 sh "npm install"
             }
         }
-        stage('OWAPS FS SCAN') {
+        stage('Docker Build using the Dockerfile and then push it to DockerHub') {
             steps {
-                dependencyCheck additionalArguments: '--scan ./ --disableYarnAudit --disableNodeAudit', odcInstallation: 'DP'
-                dependencyCheckPublisher pattern: '**/dependency-check-report.xml'
+               script {
+                   withDockerRegistry(credentialsId: 'daus2936-docker', toolName: 'docker') {
+                   sh "docker build -t bingoonlproject . "
+                   sh "docker tag bingoonlproject daus2936/bingoonlproject:latest"
+                   sh "docker push daus2936/bingoonlproject:latest "
+                 }
+               }
             }
         }
     }
